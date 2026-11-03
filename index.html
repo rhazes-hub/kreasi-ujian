@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- XLSX Library untuk Export & Import Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- html2pdf.js untuk Generate PDF Otomatis Rapi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Firebase App (Modular SDK) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -20,14 +22,21 @@
             user-select: none;
         }
 
-        @media print {
-            body * { visibility: hidden; }
-            .no-print, header, nav, button, input, select, .sidebar, #viewLogin, #viewUjian, #viewHasil { display: none !important; }
-            #printArea, #printArea * { visibility: visible; }
-            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10px; color: #000; background: #fff; }
-            table.print-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11pt; }
-            table.print-table th, table.print-table td { border: 1px solid #333 !important; padding: 6px 10px; text-align: left; }
-            table.print-table th { background-color: #f2f2f2 !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+        /* Styling Khusus Render PDF */
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 10pt;
+        }
+        .pdf-table th, .pdf-table td {
+            border: 1px solid #333;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        .pdf-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -274,7 +283,7 @@
                         <div><label class="block text-xs font-semibold text-slate-600 mb-1">Filter Kelas</label><select id="filterKelas" onchange="renderRekapTable()" class="w-full border p-2 text-xs bg-white"><option value="SEMUA">-- Semua Kelas --</option></select></div>
                         <div class="flex items-end gap-2">
                             <button onclick="exportExcel()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold p-2 rounded-lg text-xs">📊 Excel</button>
-                            <button onclick="exportPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold p-2 rounded-lg text-xs">📄 PDF</button>
+                            <button onclick="exportPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold p-2 rounded-lg text-xs">📄 Download PDF</button>
                         </div>
                     </div>
                 </div>
@@ -309,32 +318,33 @@
             </div>
         </div>
 
-        <div id="printArea" class="hidden">
+        <!-- Wadah Rendering PDF Tersembunyi -->
+        <div id="pdfContainer" style="display: none; background: #fff; padding: 20px; color: #000; font-family: sans-serif;">
             <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px;">
-                <h2 style="font-size: 16pt; font-weight: bold; margin: 0; text-transform: uppercase;">KREASI - LAPORAN REKAPITULASI HASIL UJIAN SISWA</h2>
-                <p style="font-size: 10pt; margin: 4px 0 0 0;">Kuis, Rekap, Evaluasi, dan Asesmen Siswa yang Interaktif</p>
+                <h2 style="font-size: 14pt; font-weight: bold; margin: 0; text-transform: uppercase;">KREASI - LAPORAN REKAPITULASI HASIL UJIAN SISWA</h2>
+                <p style="font-size: 9pt; margin: 4px 0 0 0; color: #444;">Kuis, Rekap, Evaluasi, dan Asesmen Siswa yang Interaktif</p>
             </div>
-            <div style="margin-bottom: 15px; font-size: 10pt;">
-                <span><strong>Filter Kelas:</strong> <span id="printFilterKelas">Semua Kelas</span></span>
-                <span style="float: right;"><strong>Tanggal Cetak:</strong> <span id="printTanggalCetak"></span></span>
+            <div style="margin-bottom: 15px; font-size: 9pt; display: flex; justify-content: space-between;">
+                <span><strong>Filter Kelas:</strong> <span id="pdfFilterKelas">Semua Kelas</span></span>
+                <span><strong>Tanggal Cetak:</strong> <span id="pdfTanggalCetak"></span></span>
             </div>
-            <table class="print-table">
+            <table class="pdf-table">
                 <thead>
                     <tr>
                         <th style="width: 5%; text-align: center;">No</th>
-                        <th style="width: 20%;">Waktu Selesai</th>
-                        <th style="width: 25%;">Nama Peserta Didik</th>
+                        <th style="width: 22%;">Waktu Selesai</th>
+                        <th style="width: 28%;">Nama Peserta Didik</th>
                         <th style="width: 15%;">Kelas</th>
                         <th style="width: 15%;">Mata Pelajaran</th>
-                        <th style="width: 10%; text-align: center;">Skor</th>
-                        <th style="width: 10%; text-align: center;">Pelanggaran</th>
+                        <th style="width: 7%; text-align: center;">Skor</th>
+                        <th style="width: 8%; text-align: center;">Pelanggaran</th>
                     </tr>
                 </thead>
-                <tbody id="tbodyPrintRekap"></tbody>
+                <tbody id="tbodyPdfRekap"></tbody>
             </table>
-            <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 10pt;">
-                <div style="width: 40%; text-align: center;"><p style="margin-bottom: 60px;">Mengetahui,<br>Kepala Sekolah</p><p style="font-weight: bold; text-decoration: underline;">(____________________)</p></div>
-                <div style="width: 40%; text-align: center;"><p style="margin-bottom: 60px;">Guru Penguji / Proktor,</p><p style="font-weight: bold; text-decoration: underline;">(____________________)</p></div>
+            <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 9pt;">
+                <div style="width: 35%; text-align: center;"><p style="margin-bottom: 50px;">Mengetahui,<br>Kepala Sekolah</p><p style="font-weight: bold; text-decoration: underline;">( ________________________ )</p></div>
+                <div style="width: 35%; text-align: center;"><p style="margin-bottom: 50px;">Guru Penguji / Proktor,</p><p style="font-weight: bold; text-decoration: underline;">( ________________________ )</p></div>
             </div>
         </div>
     </main>
@@ -718,17 +728,35 @@
 
         function exportExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('tabelRekap')), `Rekap_Ujian_KREASI.xlsx`); }
 
+        // Fitur Export PDF Mandiri Menggunakan html2pdf.js
         function exportPDF() {
             const filter = document.getElementById('filterKelas').value;
             const filtered = dataHasil.filter(h => filter === 'SEMUA' || h.kelas === filter);
-            document.getElementById('printFilterKelas').innerText = filter === 'SEMUA' ? 'Semua Kelas' : filter;
-            document.getElementById('printTanggalCetak').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-            const tbodyPrint = document.getElementById('tbodyPrintRekap');
-            if (!filtered.length) { tbodyPrint.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:15px;">Belum ada data nilai.</td></tr>`; } 
-            else {
-                tbodyPrint.innerHTML = filtered.map((h, i) => `<tr><td style="text-align: center;">${i + 1}</td><td>${h.waktu}</td><td><strong>${h.nama}</strong></td><td>${h.kelas}</td><td>${h.mapel}</td><td style="text-align: center; font-weight: bold;">${h.skor}</td><td style="text-align: center;">${h.pelanggaran} kali</td></tr>`).join('');
+
+            document.getElementById('pdfFilterKelas').innerText = filter === 'SEMUA' ? 'Semua Kelas' : filter;
+            document.getElementById('pdfTanggalCetak').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const tbodyPdf = document.getElementById('tbodyPdfRekap');
+            if (!filtered.length) {
+                tbodyPdf.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:15px;">Belum ada data nilai.</td></tr>`;
+            } else {
+                tbodyPdf.innerHTML = filtered.map((h, i) => `<tr><td style="text-align: center;">${i + 1}</td><td>${h.waktu}</td><td><strong>${h.nama}</strong></td><td>${h.kelas}</td><td>${h.mapel}</td><td style="text-align: center; font-weight: bold;">${h.skor}</td><td style="text-align: center;">${h.pelanggaran} kali</td></tr>`).join('');
             }
-            window.print();
+
+            const element = document.getElementById('pdfContainer');
+            element.style.display = 'block';
+
+            const opt = {
+                margin:       10,
+                filename:     `Rekap_Nilai_KREASI_${filter}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none';
+            });
         }
 
         function keluar() { matikanKameraSiswa(); location.reload(); }
