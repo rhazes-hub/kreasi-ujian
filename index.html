@@ -200,6 +200,7 @@
                 </div>
             </div>
 
+            <!-- PANEL MASTER SISWA TERUPDATE (DENGAN PENCARIAN & HAPUS MASSAL) -->
             <div id="panelSiswa" class="hidden space-y-6">
                 <div class="bg-emerald-50 border border-emerald-200 p-4 sm:p-6 rounded-xl space-y-4">
                     <h3 class="font-bold text-emerald-800 text-sm">📥 Impor Data Siswa Massal via Excel</h3>
@@ -209,20 +210,40 @@
                         <button onclick="prosesUploadSiswa()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs">Upload Siswa</button>
                     </div>
                 </div>
+                
                 <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 space-y-4">
-                    <h3 class="font-bold text-slate-700 text-sm">Tambah Siswa Manual</h3>
+                    <h3 class="font-bold text-slate-700 text-sm" id="formSiswaTitle">Tambah Siswa Manual</h3>
                     <form id="formTambahSiswa" class="space-y-3">
+                        <input type="hidden" id="editSiswaId" value="">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div><label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap</label><input type="text" id="manualNamaSiswa" placeholder="Nama Siswa" required class="w-full border p-2.5 rounded-lg text-sm bg-white"></div>
                             <div><label class="block text-xs font-semibold text-slate-600 mb-1">Kelas</label><select id="manualKelasSiswa" class="w-full border p-2.5 rounded-lg text-sm bg-white"></select></div>
                         </div>
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm">Simpan Siswa</button>
+                        <div class="flex gap-2">
+                            <button type="submit" id="btnSimpanSiswa" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm">Simpan Siswa</button>
+                            <button type="button" id="btnBatalEditSiswa" onclick="batalEditSiswa()" class="hidden bg-slate-300 hover:bg-slate-400 text-slate-700 font-bold px-4 py-2.5 rounded-lg text-sm">Batal</button>
+                        </div>
                     </form>
                 </div>
+
                 <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 space-y-4">
-                    <h3 class="font-bold text-slate-700 text-sm">Daftar Seluruh Siswa</h3>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <h3 class="font-bold text-slate-700 text-sm">Daftar Seluruh Siswa</h3>
+                        <div class="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+                            <input type="text" id="cariSiswaInput" oninput="renderMasterSiswaTable()" placeholder="🔍 Cari nama siswa..." class="border border-slate-300 rounded-lg p-2 text-xs bg-white w-full sm:w-48 outline-none focus:ring-1 focus:ring-emerald-500">
+                            <button onclick="hapusSiswaTerpilih()" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-2 rounded-lg text-xs">🗑️ Hapus Terpilih</button>
+                        </div>
+                    </div>
                     <table class="w-full text-left text-xs border-collapse">
-                        <thead><tr class="bg-slate-100 text-slate-600 border-b"><th class="p-2.5">No</th><th class="p-2.5">Nama Siswa</th><th class="p-2.5">Kelas</th><th class="p-2.5 text-center">Aksi</th></tr></thead>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 border-b">
+                                <th class="p-2.5 text-center w-10"><input type="checkbox" id="selectAllSiswa" onclick="toggleSelectAllSiswa(this)"></th>
+                                <th class="p-2.5">No</th>
+                                <th class="p-2.5">Nama Siswa</th>
+                                <th class="p-2.5">Kelas</th>
+                                <th class="p-2.5 text-center">Aksi</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbodyMasterSiswa" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
@@ -277,19 +298,34 @@
                 </div>
             </div>
 
+            <!-- PANEL REKAP & SESI TERUPDATE (DENGAN HAPUS MASSAL) -->
             <div id="panelRekap" class="hidden space-y-4">
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 no-print">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
                         <div><label class="block text-xs font-semibold text-slate-600 mb-1">Filter Kelas</label><select id="filterKelas" onchange="renderRekapTable()" class="w-full border p-2 text-xs bg-white"><option value="SEMUA">-- Semua Kelas --</option></select></div>
                         <div class="flex items-end gap-2">
                             <button onclick="exportExcel()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold p-2 rounded-lg text-xs">📊 Excel</button>
                             <button onclick="exportPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold p-2 rounded-lg text-xs">📄 Download PDF</button>
                         </div>
+                        <div class="flex items-end">
+                            <button onclick="hapusRekapTerpilih()" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold p-2 rounded-lg text-xs">🗑️ Hapus Rekap Terpilih</button>
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
                     <table id="tabelRekap" class="w-full text-left text-xs border-collapse">
-                        <thead><tr class="bg-slate-100 text-slate-600 border-b"><th class="p-3">Waktu</th><th class="p-3">Nama Siswa</th><th class="p-3">Kelas</th><th class="p-3">Mapel</th><th class="p-3">Skor</th><th class="p-3">Pelanggaran</th><th class="p-3 text-center no-print">Aksi</th></tr></thead>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 border-b">
+                                <th class="p-3 text-center w-10"><input type="checkbox" id="selectAllRekap" onclick="toggleSelectAllRekap(this)"></th>
+                                <th class="p-3">Waktu</th>
+                                <th class="p-3">Nama Siswa</th>
+                                <th class="p-3">Kelas</th>
+                                <th class="p-3">Mapel</th>
+                                <th class="p-3">Skor</th>
+                                <th class="p-3">Pelanggaran</th>
+                                <th class="p-3 text-center no-print">Aksi</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbodyRekap" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
@@ -497,22 +533,96 @@
             }
         }
 
+        // --- MANAJEMEN MASTER SISWA (TAMBAH, EDIT, CARI, HAPUS MASSAL) ---
         document.getElementById('formTambahSiswa').onsubmit = function(e) {
             e.preventDefault();
-            dataSiswa.push({ id: Date.now(), nama: document.getElementById('manualNamaSiswa').value.trim(), kelas: document.getElementById('manualKelasSiswa').value });
+            const editId = document.getElementById('editSiswaId').value;
+            const namaVal = document.getElementById('manualNamaSiswa').value.trim();
+            const kelasVal = document.getElementById('manualKelasSiswa').value;
+
+            if (editId) {
+                // Proses Edit Siswa
+                const siswaObj = dataSiswa.find(s => s.id == editId);
+                if (siswaObj) {
+                    siswaObj.nama = namaVal;
+                    siswaObj.kelas = kelasVal;
+                }
+                batalEditSiswa();
+            } else {
+                // Proses Tambah Siswa Baru
+                dataSiswa.push({ id: Date.now(), nama: namaVal, kelas: kelasVal });
+            }
             simpanKeFirebase();
             this.reset();
         };
 
         function renderMasterSiswaTable() {
             const tbody = document.getElementById('tbodyMasterSiswa');
+            const keyword = document.getElementById('cariSiswaInput') ? document.getElementById('cariSiswaInput').value.toLowerCase() : '';
             if (!tbody) return;
-            if (!dataSiswa.length) { tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Belum ada siswa.</td></tr>`; return; }
-            tbody.innerHTML = dataSiswa.map((s, idx) => `<tr><td class="p-2.5">${idx + 1}</td><td class="p-2.5 font-semibold">${s.nama}</td><td class="p-2.5">${s.kelas}</td><td class="p-2.5 text-center"><button onclick="hapusSiswa(${s.id})" class="text-red-500 font-bold">Hapus</button></td></tr>`).join('');
+
+            const filtered = dataSiswa.filter(s => s.nama.toLowerCase().includes(keyword) || s.kelas.toLowerCase().includes(keyword));
+
+            if (!filtered.length) { 
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Tidak ada data siswa ditemukan.</td></tr>`; 
+                return; 
+            }
+
+            tbody.innerHTML = filtered.map((s, idx) => `
+                <tr>
+                    <td class="p-2.5 text-center"><input type="checkbox" class="pilihSiswaCheckbox" value="${s.id}"></td>
+                    <td class="p-2.5">${idx + 1}</td>
+                    <td class="p-2.5 font-semibold">${s.nama}</td>
+                    <td class="p-2.5">${s.kelas}</td>
+                    <td class="p-2.5 text-center flex justify-center gap-2">
+                        <button onclick="mulaiEditSiswa(${s.id})" class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded font-semibold text-xs">Edit</button>
+                        <button onclick="hapusSiswa(${s.id})" class="bg-red-50 text-red-600 px-2.5 py-1 rounded font-semibold text-xs">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function mulaiEditSiswa(id) {
+            const s = dataSiswa.find(x => x.id == id);
+            if (!s) return;
+            document.getElementById('editSiswaId').value = s.id;
+            document.getElementById('manualNamaSiswa').value = s.nama;
+            document.getElementById('manualKelasSiswa').value = s.kelas;
+            document.getElementById('formSiswaTitle').innerText = "Edit Data Siswa";
+            document.getElementById('btnSimpanSiswa').innerText = "Perbarui Data Siswa";
+            document.getElementById('btnBatalEditSiswa').classList.remove('hidden');
+            document.getElementById('manualNamaSiswa').focus();
+        }
+
+        function batalEditSiswa() {
+            document.getElementById('editSiswaId').value = '';
+            document.getElementById('formTambahSiswa').reset();
+            document.getElementById('formSiswaTitle').innerText = "Tambah Siswa Manual";
+            document.getElementById('btnSimpanSiswa').innerText = "Simpan Siswa";
+            document.getElementById('btnBatalEditSiswa').classList.add('hidden');
         }
 
         function hapusSiswa(id) {
-            if (confirm('Hapus siswa ini?')) { dataSiswa = dataSiswa.filter(s => s.id !== id); simpanKeFirebase(); }
+            if (confirm('Hapus siswa ini?')) { 
+                dataSiswa = dataSiswa.filter(s => s.id !== id); 
+                simpanKeFirebase(); 
+            }
+        }
+
+        function toggleSelectAllSiswa(master) {
+            const checkboxes = document.querySelectorAll('.pilihSiswaCheckbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+        }
+
+        function hapusSiswaTerpilih() {
+            const checkedBoxes = document.querySelectorAll('.pilihSiswaCheckbox:checked');
+            if (!checkedBoxes.length) return alert('Pilih minimal satu siswa yang ingin dihapus!');
+            if (confirm(`Yakin ingin menghapus ${checkedBoxes.length} siswa yang dipilih?`)) {
+                const idsToDelete = Array.from(checkedBoxes).map(cb => Number(cb.value));
+                dataSiswa = dataSiswa.filter(s => !idsToDelete.includes(s.id));
+                simpanKeFirebase();
+                document.getElementById('selectAllSiswa').checked = false;
+            }
         }
 
         function downloadTemplateSiswa() {
@@ -698,17 +808,53 @@
             });
         }
 
+        // --- MANAJEMEN TABEL REKAP (DENGAN HAPUS MASSAL) ---
         function renderRekapTable() {
             const tbody = document.getElementById('tbodyRekap');
             const filter = document.getElementById('filterKelas').value;
             if (!tbody) return;
             const filtered = dataHasil.filter(h => filter === 'SEMUA' || h.kelas === filter);
-            if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Belum ada rekap nilai.</td></tr>`; return; }
-            tbody.innerHTML = filtered.map(h => `<tr><td class="p-3">${h.waktu}</td><td class="p-3 font-semibold">${h.nama}</td><td class="p-3">${h.kelas}</td><td class="p-3 font-semibold text-emerald-700">${h.mapel}</td><td class="p-3 font-bold">${h.skor}</td><td class="p-3 ${h.pelanggaran > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}">${h.pelanggaran} kali</td><td class="p-3 text-center no-print"><button onclick="hapusRekap(${h.id})" class="bg-red-50 text-red-600 px-2 py-1 rounded font-semibold">Hapus</button></td></tr>`).join('');
+            if (!filtered.length) { 
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">Belum ada rekap nilai.</td></tr>`; 
+                return; 
+            }
+            tbody.innerHTML = filtered.map(h => `
+                <tr>
+                    <td class="p-3 text-center"><input type="checkbox" class="pilihRekapCheckbox" value="${h.id}"></td>
+                    <td class="p-3">${h.waktu}</td>
+                    <td class="p-3 font-semibold">${h.nama}</td>
+                    <td class="p-3">${h.kelas}</td>
+                    <td class="p-3 font-semibold text-emerald-700">${h.mapel}</td>
+                    <td class="p-3 font-bold">${h.skor}</td>
+                    <td class="p-3 ${h.pelanggaran > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}">${h.pelanggaran} kali</td>
+                    <td class="p-3 text-center no-print">
+                        <button onclick="hapusRekap(${h.id})" class="bg-red-50 text-red-600 px-2 py-1 rounded font-semibold text-xs">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         function hapusRekap(id) {
-            if (confirm('Hapus sesi siswa ini?')) { dataHasil = dataHasil.filter(h => h.id !== id); simpanKeFirebase(); }
+            if (confirm('Hapus sesi siswa ini?')) { 
+                dataHasil = dataHasil.filter(h => h.id !== id); 
+                simpanKeFirebase(); 
+            }
+        }
+
+        function toggleSelectAllRekap(master) {
+            const checkboxes = document.querySelectorAll('.pilihRekapCheckbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+        }
+
+        function hapusRekapTerpilih() {
+            const checkedBoxes = document.querySelectorAll('.pilihRekapCheckbox:checked');
+            if (!checkedBoxes.length) return alert('Pilih minimal satu rekap nilai yang ingin dihapus!');
+            if (confirm(`Yakin ingin menghapus ${checkedBoxes.length} rekap nilai yang dipilih?`)) {
+                const idsToDelete = Array.from(checkedBoxes).map(cb => Number(cb.value));
+                dataHasil = dataHasil.filter(h => !idsToDelete.includes(h.id));
+                simpanKeFirebase();
+                document.getElementById('selectAllRekap').checked = false;
+            }
         }
 
         document.getElementById('formGantiPassword').onsubmit = function(e) {
