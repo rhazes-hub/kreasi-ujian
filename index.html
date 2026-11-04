@@ -119,7 +119,7 @@
 
         <div id="viewUjian" class="hidden space-y-4 sm:space-y-6 no-print">
             <div id="warningCurang" class="hidden bg-amber-100 border border-amber-300 text-amber-800 p-3 rounded-lg text-xs font-semibold flex justify-between items-center">
-                <span>⚠️ PERINGATAN: Terdeteksi meninggalkan halaman ujian! Pelanggaran: <span id="countCurang">0</span> kali.</span>
+                <span>⚠️ PERINGATAN: Terdeteksi melakukan aktivitas mencurigakan! Pelanggaran: <span id="countCurang">0</span> kali. (Catatan Tercatat di Database)</span>
             </div>
 
             <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs sm:text-sm shadow-sm">
@@ -402,6 +402,9 @@
         let pinAdmin = '9999';
         let fiturKameraAktif = false;
         let mediaStreamTrack = null;
+
+        // Variabel Tambahan Pengenal Siswa Aktif Ujian untuk Real-time Log
+        let currentSiswaSessionId = null;
 
         db.ref('exam_data').on('value', (snapshot) => {
             const val = snapshot.val();
@@ -718,6 +721,10 @@
                 if (fiturKameraAktif) { const aksesKamera = await aktifkanKameraSiswa(); if (!aksesKamera) return; }
                 currentSiswa = { nama, kelas }; activeMapelNama = mapel.nama;
                 jawabanSiswa = {}; currentIndex = 0; pelanggaranCount = 0;
+                
+                // Buat ID Sesi Penebak Ujian untuk Sinkronisasi Pelanggaran ke Firebase Real-time
+                currentSiswaSessionId = Date.now();
+
                 document.getElementById('viewLogin').classList.add('hidden');
                 document.getElementById('viewUjian').classList.remove('hidden');
                 document.getElementById('navUser').classList.remove('hidden');
@@ -790,7 +797,7 @@
             let benar = 0;
             activeSoalList.forEach(s => { if (jawabanSiswa[s.id] === s.kunci) benar++; });
             const skor = Math.round((benar / activeSoalList.length) * 100);
-            dataHasil.unshift({ id: Date.now(), waktu: new Date().toLocaleString('id-ID'), nama: currentSiswa.nama, kelas: currentSiswa.kelas, mapel: activeMapelNama, skor: skor, pelanggaran: pelanggaranCount });
+            dataHasil.unshift({ id: currentSiswaSessionId || Date.now(), waktu: new Date().toLocaleString('id-ID'), nama: currentSiswa.nama, kelas: currentSiswa.kelas, mapel: activeMapelNama, skor: skor, pelanggaran: pelanggaranCount });
             simpanKeFirebase(); matikanKameraSiswa();
             document.getElementById('viewUjian').classList.add('hidden');
             document.getElementById('viewHasil').classList.remove('hidden');
@@ -798,14 +805,78 @@
             document.getElementById('detailJawaban').innerText = `Benar ${benar} dari ${activeSoalList.length} soal`;
         }
 
+        // --- SISTEM ANTI-KECURANGAN SUPER KETAT & REAL-TIME LOG DATABASE ---
         function setupAntiCheat() {
+            // 1. Deteksi Pindah Tab / Pindah Aplikasi / Kehilangan Fokus Layar
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden && !document.getElementById('viewUjian').classList.contains('hidden')) {
-                    pelanggaranCount++;
-                    document.getElementById('warningCurang').classList.remove('hidden');
-                    document.getElementById('countCurang').innerText = pelanggaranCount;
+                    catatPelanggaranRealtime("Pindah Tab / Membuka Aplikasi Lain");
                 }
             });
+
+            window.addEventListener('blur', function() {
+                if (!document.getElementById('viewUjian').classList.contains('hidden')) {
+                    catatPelanggaranRealtime("Kehilangan Fokus Layar / Split Screen");
+                }
+            });
+
+            // 2. Blokir Copy, Cut, Paste, & Select
+            document.addEventListener('copy', function(e) {
+                if (!document.getElementById('viewUjian').classList.contains('hidden')) {
+                    e.preventDefault();
+                    catatPelanggaranRealtime("Mencoba Mengopi (Copy) Teks Soal");
+                }
+            });
+
+            document.addEventListener('paste', function(e) {
+                if (!document.getElementById('viewUjian').classList.contains('hidden')) {
+                    e.preventDefault();
+                    catatPelanggaranRealtime("Mencoba Menempel (Paste) Teks");
+                }
+            });
+
+            // 3. Blokir Tombol Shortcut Keyboard Berbahaya (F12, Ctrl+C, Ctrl+V, Ctrl+U, Ctrl+Shift+I, dll)
+            document.addEventListener('keydown', function(e) {
+                if (!document.getElementById('viewUjian').classList.contains('hidden')) {
+                    if (
+                        e.keyCode === 123 || // F12 (Inspect Element)
+                        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
+                        (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88 || e.keyCode === 65 || e.keyCode === 70)) // Ctrl+U, C, V, X, A, F
+                    ) {
+                        e.preventDefault();
+                        catatPelanggaranRealtime("Menekan Tombol Shortcut Dilarang (" + (e.key || e.keyCode) + ")");
+                    }
+                }
+            });
+        }
+
+        // Fungsi Catat Pelanggaran dan Simpan Langsung ke Firebase (1x, 2x, 3x dst)
+        function catatPelanggaranRealtime(jenisLog) {
+            pelanggaranCount++;
+            document.getElementById('warningCurang').classList.remove('hidden');
+            document.getElementById('countCurang').innerText = pelanggaranCount;
+
+            // Berikan Efek Alert/Notifikasi Ringan Tanpa Mengunci Soal
+            alert(`⚠️ PERINGATAN KECURANGAN (${pelanggaranCount}x)!\nAlasan: ${jenisLog}.\nAktivitas Anda telah terekam secara otomatis di database!`);
+
+            // Cari Sesi Rekap Nilai yang Sedang Berjalan & Sync Langsung ke Firebase Real-time
+            if (currentSiswaSessionId && currentSiswa) {
+                let rekapIndex = dataHasil.findIndex(h => h.id === currentSiswaSessionId);
+                if (rekapIndex !== -1) {
+                    dataHasil[rekapIndex].pelanggaran = pelanggaranCount;
+                } else {
+                    dataHasil.unshift({ 
+                        id: currentSiswaSessionId, 
+                        waktu: new Date().toLocaleString('id-ID'), 
+                        nama: currentSiswa.nama, 
+                        kelas: currentSiswa.kelas, 
+                        mapel: activeMapelNama, 
+                        skor: 0, 
+                        pelanggaran: pelanggaranCount 
+                    });
+                }
+                simpanKeFirebase();
+            }
         }
 
         // --- MANAJEMEN TABEL REKAP (DENGAN HAPUS MASSAL) ---
@@ -872,7 +943,7 @@
             document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).className = "pb-2 px-3 sm:px-4 border-b-2 border-emerald-600 font-bold text-emerald-700 text-xs sm:text-sm whitespace-nowrap";
         }
 
-        function exportExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('tabelRekap')), `Rekap_Ujian_KREASI.xlsx`); }
+        function exportExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('tabelRekap')), `Rekap_Nilai_KREASI.xlsx`); }
 
         // Fitur Export PDF Mandiri Menggunakan html2pdf.js
         function exportPDF() {
