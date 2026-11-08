@@ -643,6 +643,13 @@
                 fiturTampilSkorAktif = true;
                 simpanKeFirebase();
             }
+
+            // SIMPAN CACHE KELAS DAN SISWA KE LOCALSTORAGE UNTUK INSTANT LOADING
+            try {
+                localStorage.setItem('kreasi_cache_kelas', JSON.stringify(dataKelas));
+                localStorage.setItem('kreasi_cache_siswa', JSON.stringify(dataSiswa));
+            } catch(e) {}
+
             updateTampilanSakelarToggle();
             renderDashboardMetrik();
             renderOpsiKelas();
@@ -672,6 +679,21 @@
         }
 
         window.onload = function() { 
+            // MUAT CACHE KELAS & SISWA SEKETIKA SAAT HALAMAN DIMUAT (0 DELAY)
+            try {
+                const cachedKelas = localStorage.getItem('kreasi_cache_kelas');
+                const cachedSiswa = localStorage.getItem('kreasi_cache_siswa');
+                if (cachedKelas) {
+                    dataKelas = JSON.parse(cachedKelas);
+                } else {
+                    dataKelas = ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'];
+                }
+                if (cachedSiswa) {
+                    dataSiswa = JSON.parse(cachedSiswa);
+                }
+                renderOpsiKelas();
+            } catch(e) {}
+
             setupAntiCheat(); 
             setupAutoSaveBackup();
         };
@@ -719,25 +741,42 @@
             const selectManualSiswa = document.getElementById('manualKelasSiswa');
             const selectMapelTarget = document.getElementById('mapelKelasTarget');
             const listDaftarKelas = document.getElementById('listDaftarKelas');
-            if (selectSiswa) selectSiswa.innerHTML = '';
-            if (selectManualSiswa) selectManualSiswa.innerHTML = '';
-            if (selectMapelTarget) selectMapelTarget.innerHTML = '';
-            if (listDaftarKelas) listDaftarKelas.innerHTML = '';
-            dataKelas.forEach(k => {
-                if (selectSiswa) selectSiswa.innerHTML += `<option value="${k}">${k}</option>`;
-                if (selectManualSiswa) selectManualSiswa.innerHTML += `<option value="${k}">${k}</option>`;
-                if (selectMapelTarget) selectMapelTarget.innerHTML += `<option value="${k}">${k}</option>`;
-                if (listDaftarKelas) {
+            
+            if (selectSiswa) {
+                const curVal = selectSiswa.value;
+                selectSiswa.innerHTML = '';
+                dataKelas.forEach(k => {
+                    selectSiswa.innerHTML += `<option value="${k}">${k}</option>`;
+                });
+                if (curVal && dataKelas.includes(curVal)) selectSiswa.value = curVal;
+            }
+            
+            if (selectManualSiswa) {
+                selectManualSiswa.innerHTML = '';
+                dataKelas.forEach(k => { selectManualSiswa.innerHTML += `<option value="${k}">${k}</option>`; });
+            }
+            
+            if (selectMapelTarget) {
+                selectMapelTarget.innerHTML = '';
+                dataKelas.forEach(k => { selectMapelTarget.innerHTML += `<option value="${k}">${k}</option>`; });
+            }
+
+            if (listDaftarKelas) {
+                listDaftarKelas.innerHTML = '';
+                dataKelas.forEach(k => {
                     listDaftarKelas.innerHTML += `<div class="p-3 border rounded-xl bg-white flex justify-between items-center text-xs shadow-sm"><span class="font-bold text-slate-700">${k}</span><button onclick="hapusKelas('${k}')" class="text-red-500 font-semibold hover:underline">Hapus</button></div>`;
-                }
-            });
+                });
+            }
+
             updateDropdownSiswa();
             renderFilterSoalKelasDropdown();
             renderFilterRekapKelasDropdown();
         }
 
         function updateDropdownSiswa() {
-            const kelasDipilih = document.getElementById('siswaKelas').value;
+            const selectSiswa = document.getElementById('siswaKelas');
+            if (!selectSiswa) return;
+            const kelasDipilih = selectSiswa.value;
             const dropdownNama = document.getElementById('siswaNamaDropdown');
             if (!dropdownNama) return;
             dropdownNama.innerHTML = `<option value="">-- Pilih Nama Anda --</option>`;
